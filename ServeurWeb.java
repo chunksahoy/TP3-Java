@@ -32,7 +32,7 @@ public class ServeurWeb {
     static final int DELAI = 500;
     static final int PORT_MIN = 0;
     static final int PORT_MAX = 65537;
-    private static final String CONFIG_PATH = "C:\\Users\\Charles\\Documents\\NetBeansProjects\\TP3-ServeurWeb\\build\\classes\\tp3\\serveurweb\\" + "config.txt";
+    private static final String CONFIG_PATH = "config.txt";
     static int nbClients = 0;
     private boolean pasFini = true;
     private String filePath = "c:\\www\\";
@@ -44,13 +44,15 @@ public class ServeurWeb {
     
     private static void lireConfigurations(ServeurWeb server) throws Exception{
         File config = new File(CONFIG_PATH);
-        BufferedReader reader = new BufferedReader(new FileReader(config));
-        String ligne = "";
-        while(ligne != null) {
-            ligne = reader.readLine();
-            if(ligne != null)
-                server.settings.add(ligne);
-        }
+        if(config.exists()) {
+            BufferedReader reader = new BufferedReader(new FileReader(config));
+            String ligne = "";
+            while(ligne != null) {
+               ligne = reader.readLine();
+               if(ligne != null)
+                  server.settings.add(ligne);
+            }
+         }
     }
     private static void configurer(ServeurWeb server) {
         String param[];
@@ -79,19 +81,19 @@ public class ServeurWeb {
         try {
             int port = 80;
             String filePath = "c:\\www\\";
-            final String CONFIG_PATH = "C:\\Users\\Charles\\Documents\\NetBeansProjects\\TP3-ServeurWeb\\build\\classes\\tp3\\serveurweb\\" + "config.txt";
+            final String CONFIG_PATH = "config.txt";
 
             switch( args.length )
             {
                 case 0:
                     try
-                    {
-                        
+                    {                        
                         ServeurWeb serveur = new ServeurWeb();
-                        lireConfigurations(serveur);
-                        configurer(serveur);
-                        serveur.lancerServeur();
-                        
+                        lireConfigurations(serveur);                        
+                        if(serveur.settings != null) {
+                           configurer(serveur);
+                        }
+                        serveur.lancerServeur();                        
                     }
                     catch( NumberFormatException nfe )
                     {
@@ -150,6 +152,8 @@ public class ServeurWeb {
         }
     }
     ServeurWeb() {
+        this.port = 80;
+        this.filePath = "C:\\www";        
         Terminateur test = new Terminateur();
         threadTerminateur = new Thread(test);
         threadTerminateur.start();
