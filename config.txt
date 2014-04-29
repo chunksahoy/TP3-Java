@@ -1,0 +1,4 @@
+port=85
+racine=c:/www
+index=index.html
+listage=oui
