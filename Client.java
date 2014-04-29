@@ -171,12 +171,13 @@ public class Client implements Runnable {
     
     private void reponsesServeur(String filePath) throws IOException {
         File fichier = new File(filePath);
+		ecrireLigne(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true), "HTTP/1.0 200 OK");
         ecrireLigne(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true),"Server: Serveur Web v0.2 par Charles Hunter-Roy et Francis Clement" );
         ecrireLigne(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true),"Date: " + getDateRfc822(new Date()).toString());
         ecrireLigne(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true), "Content-type: " + getContentType(filePath.substring(filePath.lastIndexOf('.')+1)));
         ecrireLigne(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true), "Last-modified: " + String.valueOf(getDateRfc822(new Date(fichier.lastModified()))));
         ecrireLigne(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true), "Content-length: " + String.valueOf(fichier.length()));
-        ecrireLigne(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true), "");
+		ecrireLigne(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true), "");
     }
     
     public void run() {
@@ -186,11 +187,8 @@ public class Client implements Runnable {
             
             PrintWriter writer = new PrintWriter(new OutputStreamWriter(
                     socket.getOutputStream()), true);
-            
-            //String ligne = lire(new BufferedReader(new InputStreamReader(socket.getInputStream())));
-//            reponsesServeur(filePath);
-            //listerContenu((new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true)), listeFichiers);
-            
+					
+            //listerContenu((new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true)), listeFichiers);            
             //ecrireLigne(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true), nbFichiers + " fichier(s) disponible(s)");
             
             boolean pasFini = true;
@@ -241,7 +239,7 @@ public class Client implements Runnable {
     
     private void traiterFichier (String commande, File file, PrintWriter writer) throws Exception {
         if (file.exists()) {
-            writer.println("HTTP/1.0 200 Ok");
+
             if (file.isDirectory()) {
                 File[] liste = file.listFiles();
                 listerContenu((new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true)), liste);
