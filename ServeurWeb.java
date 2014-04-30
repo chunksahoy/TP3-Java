@@ -89,7 +89,8 @@ public class ServeurWeb {
                     try
                     {                        
                         ServeurWeb serveur = new ServeurWeb();
-                        lireConfigurations(serveur);                        
+                        lireConfigurations(serveur);
+						
                         if(serveur.settings != null) {
                            configurer(serveur);
                         }
@@ -188,8 +189,8 @@ public class ServeurWeb {
                 socket = serveur.accept();
                 System.out.println("Ouverture d'une connexion");
                 
-                Client client = new Client(socket, getFilePath());
-                
+                Client client = new Client(socket, getFilePath(), listing, index);
+				
                 threadClient = new Thread(client);
                 threadClient.start();
                 

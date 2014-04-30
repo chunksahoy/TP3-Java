@@ -40,7 +40,9 @@ public class Client implements Runnable {
     private File[] listeFichiers;
     private int nbFichiers = 0;
     private String prompt = "=>";
-    
+    private boolean listing = true;
+    private String index = "index.html";
+
     // constructeur paramétrique
     public Client(Socket socket) {
         this.socket = socket;
@@ -50,6 +52,15 @@ public class Client implements Runnable {
     public Client(Socket socket, String path) {
         this.socket = socket;
         this.filePath = path;
+        initialiserCommandes();
+        initialiserListeFichiers();
+    }
+	
+	public Client(Socket socket, String path, boolean liste, String index) {
+        this.socket = socket;
+        this.filePath = path;
+		this.listing = liste;
+		this.index = index;
         initialiserCommandes();
         initialiserListeFichiers();
     }
@@ -89,7 +100,7 @@ public class Client implements Runnable {
     private boolean entreeValide(String commande) {
         boolean valide = true;
         if (commande.split("\\s+").length <= 0
-                || commande.split("\\s+").length > 2) {
+                || commande.split("\\s+").length > 3) {
             valide = false;
         }
         return valide;
@@ -202,16 +213,22 @@ public class Client implements Runnable {
                 if (verifierCommande(ligne.trim())) {
                     String fichier = ligne.trim().substring(getCommandes(ligne.trim()).length()+2, ligne.lastIndexOf(" ")).trim();
                     File file = new File(filePath + "\\" + fichier);
-                    //reponsesServeur(fichier);
                     
                     if(!entreeValide(ligne.trim()) && !file.exists()) {
                         commande = "400 Mauvaise Requete";
                         writer.println(commande);
                         pasFini = false;
                         Thread.sleep(DELAI);
-                    }
-                    
-                    pasFini = traiterCommande(ligne.split("\\s")[0].toUpperCase(), filePath + "\\" + fichier , new PrintWriter(new OutputStreamWriter(socket.getOutputStream())));
+                    }else if (!file.exists() && pasFini) {
+						commande = "HTTP/1.0 404 Fichier Inexistant";
+						writer.println(commande);
+						pasFini = traiterCommande(ligne.split("\\s")[0].toUpperCase(),"404.html" , new PrintWriter(
+																													new OutputStreamWriter(
+																															socket.getOutputStream())));						
+						Thread.sleep(DELAI);
+					}
+                    if(pasFini)
+						pasFini = traiterCommande(ligne.split("\\s")[0].toUpperCase(), filePath + "\\" + fichier , new PrintWriter(new OutputStreamWriter(socket.getOutputStream())));
                     
                 }
                 System.out.println("fermeture d'une connexion "
@@ -219,34 +236,38 @@ public class Client implements Runnable {
                 //reader.close();
                 writer.close();
                 socket.close();
-            }} catch(EOFException e) {
+            }
+		} catch(EOFException e) {
                 
-            } catch(SocketException e){
-                //System.err.println("Connection Interrompue");
-            } catch (InterruptedException e) {
-                System.err.println("Connection interrompue!");
-            } catch (IOException e) {
-                System.err.println(e);
-            } catch (NullPointerException e) {
-                System.err.println("Client interrompu");
-            } catch (Exception e) {
-                System.err.println("Erreur inattendue!: " + e);
-            } finally {
-            ServeurWeb.nbClients--;
-            System.out.println("Nb clients: " + ServeurWeb.nbClients);
-        }
-    }
-    
-    private void traiterFichier (String commande, File file, PrintWriter writer) throws Exception {
+        } catch(SocketException e){
+            //System.err.println("Connection Interrompue");
+        } catch (InterruptedException e) {
+            System.err.println("Connection interrompue!");
+        } catch (IOException e) {
+            System.err.println(e);
+        } catch (NullPointerException e) {
+            System.err.println("Client interrompu");
+        } catch (Exception e) {
+            System.err.println("Erreur inattendue!: " + e);
+        } 
+		finally {
+			ServeurWeb.nbClients--;
+			System.out.println("Nb clients: " + ServeurWeb.nbClients);
+		}
+    } 
+    private void traiterFichier (File file, PrintWriter writer) throws Exception {
         if (file.exists()) {
-
             if (file.isDirectory()) {
-                File[] liste = file.listFiles();
-                listerContenu((new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true)), liste);
-                writer.println(nbFichiers + " fichier(s) disponible(s)");
-                
-            } else if (file.isFile()) {
-                
+                File index = new File("index.html");
+				if(index.exists()) {
+					traiterFichier(index, new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true));
+				}
+				else {
+					File erreur = new File("403.html");
+					traiterFichier(erreur, new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true));
+				}
+            } 
+			else if (file.isFile()) {                
                 FileInputStream fis = new FileInputStream(file);
                 OutputStream os = new BufferedOutputStream(socket.getOutputStream());
                 
@@ -272,14 +293,10 @@ public class Client implements Runnable {
 					/* Don't care */
 					}
 				}
-            }
-            Thread.sleep(DELAI);
-        } else if (!file.exists()) {
-            commande = "404 Fichier Inexistant";
-            writer.println(commande);
-            Thread.sleep(DELAI);
-        }
-    }
+			}
+			Thread.sleep(DELAI);
+		}
+    }   
     
     private boolean traiterCommande (String commande, String fileName, PrintWriter writer) throws Exception{
         try {
@@ -287,7 +304,7 @@ public class Client implements Runnable {
             switch(commande) {
                 case "GET":
                     reponsesServeur(fileName);
-                    traiterFichier(commande, fichier, new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true));
+                    traiterFichier(fichier, new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true));
                     break;
                 case "HEAD":
                     reponsesServeur(fileName);
