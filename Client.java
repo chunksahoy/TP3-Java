@@ -40,7 +40,7 @@ public class Client implements Runnable {
     private File[] listeFichiers;
     private int nbFichiers = 0;
     private String prompt = "=>";
-    private boolean listing = true;
+    private boolean listing = false;
     private String index = "index.html";
 
     // constructeur paramétrique
@@ -215,7 +215,7 @@ public class Client implements Runnable {
                     File file = new File(filePath + "\\" + fichier);
                     
                     if(!entreeValide(ligne.trim()) && !file.exists()) {
-                        commande = "400 Mauvaise Requete";
+                        commande = "HTTP/1.0 400 Mauvaise Requete";
                         writer.println(commande);
                         pasFini = false;
                         Thread.sleep(DELAI);
@@ -258,9 +258,13 @@ public class Client implements Runnable {
     private void traiterFichier (File file, PrintWriter writer) throws Exception {
         if (file.exists()) {
             if (file.isDirectory()) {
-                File index = new File("index.html");
-				if(index.exists()) {
-					traiterFichier(index, new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true));
+                File page = new File(index);
+				if(page.exists()) {
+					traiterFichier(page, new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true));
+				}
+				else if(!page.exists() && listing){
+					File[] liste = file.listFiles();
+					listerContenu(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true), liste);
 				}
 				else {
 					File erreur = new File("403.html");
@@ -309,7 +313,7 @@ public class Client implements Runnable {
                 case "HEAD":
                     reponsesServeur(fileName);
                     break;
-                default: writer.println("500 Commande non supportee");
+                default: writer.println("HTTP/1.0 500 Commande non supportee");
                 break;
             }
             return false;
