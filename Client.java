@@ -33,6 +33,7 @@ public class Client implements Runnable {
     
     private final int DELAI = 500;
     private Socket socket;
+	private int port = 80;
     private String filePath;
     private ArrayList<String> commandes = new ArrayList<String>();
     private ArrayList<String> contents = new ArrayList<String>();
@@ -64,7 +65,15 @@ public class Client implements Runnable {
         initialiserCommandes();
         initialiserListeFichiers();
     }
-    
+    public Client(Socket socket, String path, boolean liste, String index, int port) {
+        this.socket = socket;
+        this.filePath = path;
+		this.listing = liste;
+		this.index = index;
+		this.port = port;
+        initialiserCommandes();
+        initialiserListeFichiers();
+    }
     private void initialiserListeFichiers() {
         fichier = new File(filePath);
         listeFichiers = fichier.listFiles();
@@ -114,20 +123,25 @@ public class Client implements Runnable {
         }
         return result;
     }
-    private void listerContenu(PrintWriter writer, File[] liste) {
+    private void listerContenu(PrintWriter writer, File[] liste, File file) throws Exception {
+		writer.println("<pre>");
+		writer.println("Contenu du dossier " + file.getName() + ": ");
         for (int i = 0; i < liste.length; i++) {
             if (liste[i].isFile()) {
                 nbFichiers++;
-                writer.printf("%-30s %-10s %tD %n", liste[i].getName(), liste[i].length(), liste[i].lastModified());
+				writer.printf("%-40s %-5s %-15s %-5s %tD %n", "<a href='localhost:" + port + "/" + liste[i].getCanonicalPath() +
+				"'>" + liste[i].getName() + "</a>", "Taille:", liste[i].length(), "Dernieres modif.:", liste[i].lastModified());
             } else if (liste[i].isDirectory()) {
                 nbFichiers++;
-                writer.printf("%-41s %tD %n", "[]" + liste[i].getName(), liste[i].lastModified());
+				String[] temp = liste[i].getAbsolutePath().replace("\\", "/").split(filePath.replace("\\", "/"));
+				writer.printf("%-60s %-5s %tD %n", "<a href='localhost:"+ port + "/" + temp[1] +
+				"'>[]"+ liste[i].getName() + "</a>" ,"Dernieres modif.:", liste[i].lastModified());
             }
         }
+		writer.println("</pre");
     }
     private void ecrireLigne(PrintWriter writer, String msg) {
         writer.println(msg);
-        System.out.println(msg);
     }
     private void ecrire(PrintWriter writer, String msg) {
         writer.print(msg);
@@ -156,7 +170,7 @@ public class Client implements Runnable {
         return formatRfc822.format(date);
     }
     private String getContentType(String filePath) {
-        String contentType = "";
+        String contentType = "text/html";
         switch(filePath) {
             case "html":
                 contentType = "text/html";
@@ -187,7 +201,8 @@ public class Client implements Runnable {
         ecrireLigne(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true),"Date: " + getDateRfc822(new Date()).toString());
         ecrireLigne(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true), "Content-type: " + getContentType(filePath.substring(filePath.lastIndexOf('.')+1)));
         ecrireLigne(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true), "Last-modified: " + String.valueOf(getDateRfc822(new Date(fichier.lastModified()))));
-        ecrireLigne(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true), "Content-length: " + String.valueOf(fichier.length()));
+		if(fichier.isFile())
+			ecrireLigne(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true), "Content-length: " + String.valueOf(fichier.length()));
 		ecrireLigne(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true), "");
     }
     
@@ -206,14 +221,12 @@ public class Client implements Runnable {
             
             while (pasFini) {
                 //writer.print(prompt);
-                writer.flush();
+                //writer.flush();
                 String ligne = reader.readLine();
                 String commande = "200 Ok";
-                
-                if (verifierCommande(ligne.trim())) {
+                if (verifierCommande(ligne)) {
                     String fichier = ligne.trim().substring(getCommandes(ligne.trim()).length()+2, ligne.lastIndexOf(" ")).trim();
                     File file = new File(filePath + "\\" + fichier);
-                    
                     if(!entreeValide(ligne.trim()) && !file.exists()) {
                         commande = "HTTP/1.0 400 Mauvaise Requete";
                         writer.println(commande);
@@ -228,7 +241,7 @@ public class Client implements Runnable {
 						Thread.sleep(DELAI);
 					}
                     if(pasFini)
-						pasFini = traiterCommande(ligne.split("\\s")[0].toUpperCase(), filePath + "\\" + fichier , new PrintWriter(new OutputStreamWriter(socket.getOutputStream())));
+						pasFini = traiterCommande(ligne.split("\\s")[0].toUpperCase(), filePath + "\\" + fichier, new PrintWriter(new OutputStreamWriter(socket.getOutputStream())));
                     
                 }
                 System.out.println("fermeture d'une connexion "
@@ -252,23 +265,22 @@ public class Client implements Runnable {
         } 
 		finally {
 			ServeurWeb.nbClients--;
-			System.out.println("Nb clients: " + ServeurWeb.nbClients);
 		}
     } 
-    private void traiterFichier (File file, PrintWriter writer) throws Exception {
+    private void traiterFichier (File file) throws Exception {
         if (file.exists()) {
             if (file.isDirectory()) {
                 File page = new File(index);
 				if(page.exists()) {
-					traiterFichier(page, new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true));
+					traiterFichier(page);
 				}
 				else if(!page.exists() && listing){
-					File[] liste = file.listFiles();
-					listerContenu(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true), liste);
+					File[] liste = file.listFiles();					
+					listerContenu(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true), liste, file);
 				}
 				else {
 					File erreur = new File("403.html");
-					traiterFichier(erreur, new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true));
+					traiterFichier(erreur);
 				}
             } 
 			else if (file.isFile()) {                
@@ -308,7 +320,7 @@ public class Client implements Runnable {
             switch(commande) {
                 case "GET":
                     reponsesServeur(fileName);
-                    traiterFichier(fichier, new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true));
+                    traiterFichier(fichier);
                     break;
                 case "HEAD":
                     reponsesServeur(fileName);

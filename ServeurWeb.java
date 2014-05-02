@@ -109,7 +109,13 @@ public class ServeurWeb {
                         if( ( port >= PORT_MIN ) && ( port <= PORT_MAX ) )
                         {
                             ServeurWeb serveur = new ServeurWeb(port);
-                            serveur.lancerServeur();
+							lireConfigurations(serveur);
+						
+							if(serveur.settings != null) {
+								configurer(serveur);
+								serveur.port = port;
+							}
+							serveur.lancerServeur(); 
                         }
                         else
                         {
@@ -130,7 +136,14 @@ public class ServeurWeb {
                         if(( port >= PORT_MIN ) && ( port <= PORT_MAX )  && new File(filePath).exists())
                         {
                             ServeurWeb serveur = new ServeurWeb(port, filePath);
-                            serveur.lancerServeur();
+							lireConfigurations(serveur);
+						
+							if(serveur.settings != null) {
+								configurer(serveur);
+								serveur.port = port;
+								serveur.filePath = filePath;
+							}
+							serveur.lancerServeur(); 
                         }
                         else
                         {
@@ -189,8 +202,7 @@ public class ServeurWeb {
                 socket = serveur.accept();
                 System.out.println("Ouverture d'une connexion");
                 
-                Client client = new Client(socket, getFilePath(), listing, index);
-				
+                Client client = new Client(socket, this.getFilePath(), listing, index, port);
                 threadClient = new Thread(client);
                 threadClient.start();
                 
