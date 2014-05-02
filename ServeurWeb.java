@@ -108,7 +108,13 @@ public class ServeurWeb {
                         
                         if( ( port >= PORT_MIN ) && ( port <= PORT_MAX ) )
                         {
-                            ServeurWeb serveur = new ServeurWeb(port);
+                           ServeurWeb serveur = new ServeurWeb(port);
+                           lireConfigurations(serveur);
+						
+                           if(serveur.settings != null) {
+                              configurer(serveur);
+                           }
+                            serveur.port = port;
                             serveur.lancerServeur();
                         }
                         else
