@@ -108,25 +108,15 @@ public class ServeurWeb {
                         
                         if( ( port >= PORT_MIN ) && ( port <= PORT_MAX ) )
                         {
-<<<<<<< HEAD
+
                            ServeurWeb serveur = new ServeurWeb(port);
                            lireConfigurations(serveur);
 						
                            if(serveur.settings != null) {
                               configurer(serveur);
+                              serveur.port = port;
                            }
-                            serveur.port = port;
-                            serveur.lancerServeur();
-=======
-                            ServeurWeb serveur = new ServeurWeb(port);
-							lireConfigurations(serveur);
-						
-							if(serveur.settings != null) {
-								configurer(serveur);
-								serveur.port = port;
-							}
-							serveur.lancerServeur(); 
->>>>>>> d1b071f3d95090e7915dbaa083bdc9bcf9ae7840
+                           serveur.lancerServeur(); 
                         }
                         else
                         {

@@ -268,13 +268,9 @@ public class Client implements Runnable {
 			ServeurWeb.nbClients--;
 		}
     } 
-<<<<<<< HEAD
-    private void traiterFichier (File file, PrintWriter writer) throws Exception {
-         if (file.exists()) {
-=======
+
     private void traiterFichier (File file) throws Exception {
         if (file.exists()) {
->>>>>>> d1b071f3d95090e7915dbaa083bdc9bcf9ae7840
             if (file.isDirectory()) {
                 File page = new File(index);
 				if(page.exists()) {
