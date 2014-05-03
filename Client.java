@@ -227,7 +227,8 @@ public class Client implements Runnable {
                 String ligne = reader.readLine();
                 String commande = "200 Ok";
 				if(ligne.equals("")) {
-					ligne = ;
+					//ligne = ;
+					pasFini = false;
 				}
                 if (verifierCommande(ligne)) {
                     String fichier = ligne.trim().substring(getCommandes(ligne.trim()).length()+2, ligne.lastIndexOf(" ")).trim();
