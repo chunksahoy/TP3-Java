@@ -238,9 +238,10 @@ public class Client implements Runnable {
                         pasFini = false;
                         Thread.sleep(DELAI);
                     }else if (!file.exists() && pasFini) {
-						commande = "HTTP/1.0 404 Fichier Inexistant";
-						writer.println(commande);
-						pasFini = traiterCommande(ligne.split("\\s")[0].toUpperCase(),"404.html" , new PrintWriter(
+                    
+                     commande = "HTTP/1.0 404 Fichier Inexistant";
+                     writer.println(commande);
+                     pasFini = traiterCommande(ligne.split("\\s")[0].toUpperCase(),"404.html" , new PrintWriter(
 																													new OutputStreamWriter(
 																															socket.getOutputStream())));						
 						Thread.sleep(DELAI);
@@ -279,6 +280,7 @@ public class Client implements Runnable {
 			}
 		}
     } 
+
     private void traiterFichier (File file) throws Exception {
         if (file.exists()) {
             if (file.isDirectory()) {
@@ -294,7 +296,7 @@ public class Client implements Runnable {
 					File erreur = new File("403.html");
 					traiterFichier(erreur);
 				}
-            } 
+         } 
 			else if (file.isFile()) {                
                 FileInputStream fis = new FileInputStream(file);
                 OutputStream os = new BufferedOutputStream(socket.getOutputStream());
