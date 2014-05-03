@@ -129,12 +129,13 @@ public class Client implements Runnable {
         for (int i = 0; i < liste.length; i++) {
             if (liste[i].isFile()) {
                 nbFichiers++;
-				writer.printf("%-40s %-5s %-15s %-5s %tD %n", "<a href='localhost:" + port + "/" + liste[i].getCanonicalPath() +
+				String[] temp = liste[i].getAbsolutePath().replace("\\", "/").split(filePath.replace("\\", "/"));
+				writer.printf("%-40s %-5s %-15s %-5s %tD %n", "<a href='localhost:" + port + temp[1] +
 				"'>" + liste[i].getName() + "</a>", "Taille:", liste[i].length(), "Dernieres modif.:", liste[i].lastModified());
             } else if (liste[i].isDirectory()) {
                 nbFichiers++;
 				String[] temp = liste[i].getAbsolutePath().replace("\\", "/").split(filePath.replace("\\", "/"));
-				writer.printf("%-60s %-5s %tD %n", "<a href='localhost:"+ port + "/" + temp[1] +
+				writer.printf("%-60s %-5s %tD %n", "<a href='localhost:"+ port + temp[1] +
 				"'>[]"+ liste[i].getName() + "</a>" ,"Dernieres modif.:", liste[i].lastModified());
             }
         }
@@ -170,7 +171,7 @@ public class Client implements Runnable {
         return formatRfc822.format(date);
     }
     private String getContentType(String filePath) {
-        String contentType = "text/html";
+        String contentType = "";
         switch(filePath) {
             case "html":
                 contentType = "text/html";
@@ -196,14 +197,15 @@ public class Client implements Runnable {
     
     private void reponsesServeur(String filePath) throws IOException {
         File fichier = new File(filePath);
-		ecrireLigne(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true), "HTTP/1.0 200 OK");
-        ecrireLigne(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true),"Server: Serveur Web v0.2 par Charles Hunter-Roy et Francis Clement" );
-        ecrireLigne(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true),"Date: " + getDateRfc822(new Date()).toString());
-        ecrireLigne(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true), "Content-type: " + getContentType(filePath.substring(filePath.lastIndexOf('.')+1)));
-        ecrireLigne(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true), "Last-modified: " + String.valueOf(getDateRfc822(new Date(fichier.lastModified()))));
+		PrintWriter writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
+		writer.println("HTTP/1.0 200 OK");
+		writer.println("Server: Serveur Web v0.2 par Charles Hunter-Roy et Francis Clement");
+		writer.println("Date: " + getDateRfc822(new Date()).toString());
+		writer.println("Content-type: " + getContentType(filePath.substring(filePath.lastIndexOf('.')+1)));
+		writer.println("Last-modified: " + String.valueOf(getDateRfc822(new Date(fichier.lastModified()))));
 		if(fichier.isFile())
-			ecrireLigne(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true), "Content-length: " + String.valueOf(fichier.length()));
-		ecrireLigne(new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true), "");
+			writer.println("Content-length: " + String.valueOf(fichier.length()));
+		writer.println();
     }
     
     public void run() {
@@ -224,6 +226,9 @@ public class Client implements Runnable {
                 //writer.flush();
                 String ligne = reader.readLine();
                 String commande = "200 Ok";
+				if(ligne.equals("")) {
+					ligne = ;
+				}
                 if (verifierCommande(ligne)) {
                     String fichier = ligne.trim().substring(getCommandes(ligne.trim()).length()+2, ligne.lastIndexOf(" ")).trim();
                     File file = new File(filePath + "\\" + fichier);
@@ -246,7 +251,7 @@ public class Client implements Runnable {
                 }
                 System.out.println("fermeture d'une connexion "
                         + ServeurWeb.nbClients);
-                //reader.close();
+                reader.close();
                 writer.close();
                 socket.close();
             }
@@ -259,12 +264,19 @@ public class Client implements Runnable {
         } catch (IOException e) {
             System.err.println(e);
         } catch (NullPointerException e) {
-            System.err.println("Client interrompu");
+            System.err.println("Client interrompu" );
+			e.printStackTrace(System.err);
         } catch (Exception e) {
             System.err.println("Erreur inattendue!: " + e);
         } 
 		finally {
 			ServeurWeb.nbClients--;
+			try{
+				socket.close();
+			}
+			catch(Exception e) {
+				
+			}
 		}
     } 
     private void traiterFichier (File file) throws Exception {
@@ -332,6 +344,9 @@ public class Client implements Runnable {
         }catch(Exception ex) {
             throw(ex);
         }
+		finally {
+			//writer.close();
+		}
     }
     
     public void start() {
