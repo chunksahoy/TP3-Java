@@ -11,10 +11,13 @@ import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.BufferedInputStream;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.net.*;
 import java.text.SimpleDateFormat;
@@ -32,7 +35,7 @@ import java.util.Locale;
 public class Client implements Runnable {
     
     private final int DELAI = 500;
-    private Socket socket;
+    private final Socket socket;
 	private int port = 80;
     private String filePath;
     private ArrayList<String> commandes = new ArrayList<String>();
@@ -43,7 +46,13 @@ public class Client implements Runnable {
     private String prompt = "=>";
     private boolean listing = false;
     private String index = "index.html";
-
+	private final String ERR_LOG = "error_log.txt";
+	private final String OUT_LOG = "access_log.txt";
+	private volatile BufferedReader sreader;
+	private volatile PrintWriter swriter;
+	private volatile PrintStream acc_log;
+	private volatile PrintStream err_log;
+	
     // constructeur paramétrique
     public Client(Socket socket) {
         this.socket = socket;
@@ -144,12 +153,6 @@ public class Client implements Runnable {
     private void ecrireLigne(PrintWriter writer, String msg) {
         writer.println(msg);
     }
-    private void ecrire(PrintWriter writer, String msg) {
-        writer.print(msg);
-    }
-    private void ecrireFormater(PrintWriter writer, String format, String[] msg) {
-        writer.printf(format, msg.toString());
-    }
     private String getCommandes(String ligne) {
         boolean trouve = false;
         String commande = "";
@@ -170,6 +173,7 @@ public class Client implements Runnable {
         
         return formatRfc822.format(date);
     }
+	
     private String getContentType(String filePath) {
         String contentType = "";
         switch(filePath) {
@@ -197,7 +201,7 @@ public class Client implements Runnable {
     
     private void reponsesServeur(String filePath) throws IOException {
         File fichier = new File(filePath);
-		PrintWriter writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
+		final PrintWriter writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
 		writer.println("HTTP/1.0 200 OK");
 		writer.println("Server: Serveur Web v0.2 par Charles Hunter-Roy et Francis Clement");
 		writer.println("Date: " + getDateRfc822(new Date()).toString());
@@ -210,10 +214,13 @@ public class Client implements Runnable {
     
     public void run() {
         try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(
+			acc_log = (new PrintStream(new BufferedOutputStream(new FileOutputStream(OUT_LOG, true)), true));
+			err_log = (new PrintStream(new BufferedOutputStream(new FileOutputStream(ERR_LOG, true)), true));
+			
+            sreader = new BufferedReader(new InputStreamReader(
                     socket.getInputStream()));
             
-            PrintWriter writer = new PrintWriter(new OutputStreamWriter(
+            swriter = new PrintWriter(new OutputStreamWriter(
                     socket.getOutputStream()), true);
 					
             //listerContenu((new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true)), listeFichiers);            
@@ -222,9 +229,18 @@ public class Client implements Runnable {
             boolean pasFini = true;
             
             while (pasFini) {
-                //writer.print(prompt);
-                //writer.flush();
-                String ligne = reader.readLine();
+                //swriter.print(prompt);
+                //swriter.flush();
+				
+                String ligne = sreader.readLine();
+                String host = sreader.readLine();				
+				String browser = sreader.readLine();
+				
+				while(!browser.startsWith("User-Agent:")) {
+					browser = sreader.readLine();
+				}
+				String adresseIp = socket.getRemoteSocketAddress().toString();
+				
                 String commande = "200 Ok";
 				if(ligne.equals("")) {
 					//ligne = ;
@@ -235,26 +251,41 @@ public class Client implements Runnable {
                     File file = new File(filePath + "\\" + fichier);
                     if(!entreeValide(ligne.trim()) && !file.exists()) {
                         commande = "HTTP/1.0 400 Mauvaise Requete";
-                        writer.println(commande);
+                        swriter.println(commande);
                         pasFini = false;
+						
+						err_log.println ("Date: " + getDateRfc822(new Date()).toString() + " " + "IP: " + adresseIp + " "
+											+ "Erreur: Mauvaise Requête" + " " + "Fichier: " + file.getAbsolutePath());	
+						err_log.flush();
+						
                         Thread.sleep(DELAI);
                     }else if (!file.exists() && pasFini) {
                     
-                     commande = "HTTP/1.0 404 Fichier Inexistant";
-                     writer.println(commande);
-                     pasFini = traiterCommande(ligne.split("\\s")[0].toUpperCase(),"404.html" , new PrintWriter(
-																													new OutputStreamWriter(
-																															socket.getOutputStream())));						
+						commande = "HTTP/1.0 404 Fichier Inexistant";
+						swriter.println(commande);
+						pasFini = traiterCommande(ligne.split("\\s")[0].toUpperCase(),"404.html" , new PrintWriter(
+					 																								new OutputStreamWriter(
+																															socket.getOutputStream())));
+						err_log.println ("Date: " + getDateRfc822(new Date()).toString() + " " + "IP: " + adresseIp + " "
+											+ "Erreur: Fichier Inexistant" + " " + "Fichier: " + file.getAbsolutePath());	
+						err_log.flush();
 						Thread.sleep(DELAI);
 					}
-                    if(pasFini)
+                    if(pasFini) {
+						acc_log.println("IP: " + adresseIp + " " + "Date: " + 
+											getDateRfc822(new Date()).toString() + " " + browser);
+						acc_log.flush();
 						pasFini = traiterCommande(ligne.split("\\s")[0].toUpperCase(), filePath + "\\" + fichier, new PrintWriter(new OutputStreamWriter(socket.getOutputStream())));
-                    
+						
+					}						
                 }
                 System.out.println("fermeture d'une connexion "
                         + ServeurWeb.nbClients);
-                reader.close();
-                writer.close();
+				System.out.flush();
+				err_log.close();
+				acc_log.close();
+                sreader.close();
+                swriter.close();
                 socket.close();
             }
 		} catch(EOFException e) {
@@ -267,7 +298,6 @@ public class Client implements Runnable {
             System.err.println(e);
         } catch (NullPointerException e) {
             System.err.println("Client interrompu" );
-			e.printStackTrace(System.err);
         } catch (Exception e) {
             System.err.println("Erreur inattendue!: " + e);
         } 
@@ -299,8 +329,8 @@ public class Client implements Runnable {
 				}
          } 
 			else if (file.isFile()) {                
-                FileInputStream fis = new FileInputStream(file);
-                OutputStream os = new BufferedOutputStream(socket.getOutputStream());
+                final FileInputStream fis = new FileInputStream(file);
+                final OutputStream os = new BufferedOutputStream(socket.getOutputStream());
                 
 				byte[] buff = new byte[1024];
 				int i = 0;

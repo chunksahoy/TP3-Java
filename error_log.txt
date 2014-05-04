@@ -1,0 +1,4 @@
+Date: Sun, 04 May 2014 12:26:03 -0400 IP: /0:0:0:0:0:0:0:1:4506 Erreur: Fichier Inexistant Fichier: c:\www\TP23
+Date: Sun, 04 May 2014 12:33:57 -0400 IP: /0:0:0:0:0:0:0:1:5044 Erreur: Fichier Inexistant Fichier: c:\www\TP23
+Date: Sun, 04 May 2014 12:36:52 -0400 IP: /0:0:0:0:0:0:0:1:5059 Erreur: Fichier Inexistant Fichier: c:\www\TP23
+Date: Sun, 04 May 2014 12:37:05 -0400 IP: /0:0:0:0:0:0:0:1:5064 Erreur: Fichier Inexistant Fichier: c:\www\TP32
